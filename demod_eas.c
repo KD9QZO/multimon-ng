@@ -31,8 +31,10 @@
 
 #include "multimon.h"
 #include "filter.h"
+
 #include <math.h>
 #include <string.h>
+
 
 /* ---------------------------------------------------------------------- */
 
@@ -44,7 +46,7 @@
 * a.) The speed is 520.83 bits per second
 * b.)  Logic zero is 1562.5 Hz.
 * c.)  Logic one is 2083.3 Hz
-* 
+*
 * preamble is 0xAB sent on wire as LSB first
 *     11010101
 * start of message header begins with ZCZC
@@ -76,7 +78,9 @@
 #define INTEGRATOR_MAXVAL 10              // sampling integrator bounds
 #define MIN_IDENTICAL_MSGS 2              // # of msgs which must be identical
 
+
 /* ---------------------------------------------------------------------- */
+
 #define CORRLEN ((int)(FREQ_SAMP/BAUD))
 #define SPHASEINC (0x10000u*BAUD*SUBSAMP/FREQ_SAMP)
 
@@ -88,34 +92,35 @@ static float eascorr_space_q[CORRLEN];
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
+
 /* ---------------------------------------------------------------------- */
 
-static void eas_init(struct demod_state *s)
-{
+static void eas_init(struct demod_state *s) {
     float f;
     int i;
 
     memset(&s->l1.eas, 0, sizeof(s->l1.eas));
     memset(&s->l2.eas, 0, sizeof(s->l2.eas));
+
     for (f = 0, i = 0; i < CORRLEN; i++) {
         eascorr_mark_i[i] = cos(f);
         eascorr_mark_q[i] = sin(f);
-        f += 2.0*M_PI*FREQ_MARK/FREQ_SAMP;
+        f += 2.0 * M_PI * FREQ_MARK / FREQ_SAMP;
     }
+
     for (f = 0, i = 0; i < CORRLEN; i++) {
         eascorr_space_i[i] = cos(f);
         eascorr_space_q[i] = sin(f);
-        f += 2.0*M_PI*FREQ_SPACE/FREQ_SAMP;
+        f += 2.0 * M_PI * FREQ_SPACE / FREQ_SAMP;
     }
 }
 
 /* ---------------------------------------------------------------------- */
 
-static char eas_allowed(char data)
-{
+static char eas_allowed(char data) {
    // determine if a character is allowed in an EAS frame
    // returns true if it is
-   
+
    // high-byte ASCII characters are forbidden
    if (data & 0x80)
       return 0;
@@ -125,13 +130,12 @@ static char eas_allowed(char data)
    if (data >= 32 && data <= 126)
       // These text and punctuation characters are allowed
       return 1;
-   
+
    // all other characters forbidden
    return 0;
 }
 
-static void eas_frame(struct demod_state *s, char data)
-{
+static void eas_frame(struct demod_state *s, char data) {
     int i,j = 0;
     char * ptr = 0;
     
@@ -248,12 +252,11 @@ static void eas_frame(struct demod_state *s, char data)
     }
 }
 
-static void eas_demod(struct demod_state *s, buffer_t buffer, int length)
-{
+static void eas_demod(struct demod_state *s, buffer_t buffer, int length) {
     float f;
     unsigned char curbit;
     float dll_gain;
-    
+
     if (s->l1.eas.subsamp) {
         int numfill = SUBSAMP - s->l1.eas.subsamp;
         if (length < numfill) {
@@ -264,13 +267,14 @@ static void eas_demod(struct demod_state *s, buffer_t buffer, int length)
         length -= numfill;
         s->l1.eas.subsamp = 0;
     }
+
     // We use a sliding window correlator which advances by SUBSAMP
     // each time. One correlator sample is output for each SUBSAMP symbols
     for (; length >= SUBSAMP; length -= SUBSAMP, buffer.fbuffer += SUBSAMP) {
-        f = fsqr(mac(buffer.fbuffer, eascorr_mark_i, CORRLEN)) +
-            fsqr(mac(buffer.fbuffer, eascorr_mark_q, CORRLEN)) -
-            fsqr(mac(buffer.fbuffer, eascorr_space_i, CORRLEN)) -
-            fsqr(mac(buffer.fbuffer, eascorr_space_q, CORRLEN));
+		f = fsqr(mac(buffer.fbuffer, eascorr_mark_i, CORRLEN)) +
+				fsqr(mac(buffer.fbuffer, eascorr_mark_q, CORRLEN)) -
+				fsqr(mac(buffer.fbuffer, eascorr_space_i, CORRLEN)) -
+				fsqr(mac(buffer.fbuffer, eascorr_space_q, CORRLEN));
         // f > 0 if a mark (wireline 1) is detected
         // keep the last few correlator samples in s->l1.eas.dcd_shreg
         // when we've synchronized to the bit transitions, the dcd_shreg
@@ -278,26 +282,20 @@ static void eas_demod(struct demod_state *s, buffer_t buffer, int length)
         s->l1.eas.dcd_shreg <<= 1;
         s->l1.eas.dcd_shreg |= (f > 0);
         // the integrator is positive for 1 bits, and negative for 0 bits
-        if (f > 0 && (s->l1.eas.dcd_integrator < INTEGRATOR_MAXVAL))
-        {
+        if (f > 0 && (s->l1.eas.dcd_integrator < INTEGRATOR_MAXVAL)) {
             s->l1.eas.dcd_integrator += 1;
-        }
-        else if (f < 0 && s->l1.eas.dcd_integrator > -INTEGRATOR_MAXVAL)
-        {
+        } else if (f < 0 && s->l1.eas.dcd_integrator > -INTEGRATOR_MAXVAL) {
             s->l1.eas.dcd_integrator -= 1;
-        }
-           
+		}
         verbprintf(9, "%c", '0'+(s->l1.afsk12.dcd_shreg & 1));
-        
-        
-        /*
-         * check if transition occurred on time
-         */
-        
-        if (s->l2.eas.state != EAS_L2_IDLE)
-        dll_gain = DLL_GAIN_SYNC;
-        else
-        dll_gain = DLL_GAIN_UNSYNC;
+
+
+		/* check if transition occurred on time */
+		if (s->l2.eas.state != EAS_L2_IDLE) {
+			dll_gain = DLL_GAIN_SYNC;
+		} else {
+			dll_gain = DLL_GAIN_UNSYNC;
+		}
 
         // want transitions to take place near 0 phase
         if ((s->l1.eas.dcd_shreg ^ (s->l1.eas.dcd_shreg >> 1)) & 1) {

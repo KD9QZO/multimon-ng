@@ -37,77 +37,92 @@
  *  770   4    5    6    B
  *  852   7    8    9    C
  *  941   *    0    #    D
- * 
+ *
  */
 
 #define SAMPLE_RATE 22050
-#define BLOCKLEN (SAMPLE_RATE/100)  /* 10ms blocks */
-#define BLOCKNUM 4    /* must match numbers in multimon.h */
+#define BLOCKLEN (SAMPLE_RATE / 100)	/* 10ms blocks */
+#define BLOCKNUM 4						/* must match numbers in multimon.h */
 
-#define PHINC(x) ((x)*0x10000/SAMPLE_RATE)
+#define PHINC(x) ((x) * 0x10000 / SAMPLE_RATE)
 
 static const char *dtmf_transl = "123A456B789C*0#D";
 
 static const unsigned int dtmf_phinc[8] = {
-	PHINC(1209), PHINC(1336), PHINC(1477), PHINC(1633),
-	PHINC(697), PHINC(770), PHINC(852), PHINC(941)
+	PHINC(1209),
+	PHINC(1336),
+	PHINC(1477),
+	PHINC(1633),
+	PHINC(697),
+	PHINC(770),
+	PHINC(852),
+	PHINC(941)
 };
 
+
 /* ---------------------------------------------------------------------- */
-	
-static void dtmf_init(struct demod_state *s)
-{
+
+static void dtmf_init(struct demod_state *s) {
 	memset(&s->l1.dtmf, 0, sizeof(s->l1.dtmf));
 }
 
 /* ---------------------------------------------------------------------- */
 
-static int find_max_idx(const float *f)
-{
+static int find_max_idx(const float *f) {
 	float en = 0;
-	int idx = -1, i;
+	int idx = -1;
+	int i;
 
-	for (i = 0; i < 4; i++)
+	for (i = 0; i < 4; i++) {
 		if (f[i] > en) {
 			en = f[i];
 			idx = i;
 		}
-	if (idx < 0)
+	}
+
+	if (idx < 0) {
 		return -1;
+	}
+
 	en *= 0.1;
-	for (i = 0; i < 4; i++)
-		if (idx != i && f[i] > en)
+	for (i = 0; i < 4; i++) {
+		if (idx != i && f[i] > en) {
 			return -1;
+		}
+	}
+
 	return idx;
 }
 
 /* ---------------------------------------------------------------------- */
 
-static inline int process_block(struct demod_state *s)
-{
+static inline int process_block(struct demod_state *s) {
 	float tote;
 	float totte[16];
 	int i, j;
 
 	tote = 0;
-	for (i = 0; i < BLOCKNUM; i++)
+	for (i = 0; i < BLOCKNUM; i++) {
 		tote += s->l1.dtmf.energy[i];
+	}
+
 	for (i = 0; i < 16; i++) {
 		totte[i] = 0;
 		for (j = 0; j < BLOCKNUM; j++)
 			totte[i] += s->l1.dtmf.tenergy[j][i];
 	}
-	for (i = 0; i < 8; i++)
+
+	for (i = 0; i < 8; i++) {
 		totte[i] = fsqr(totte[i]) + fsqr(totte[i+8]);
-	memmove(s->l1.dtmf.energy+1, s->l1.dtmf.energy, 
-		sizeof(s->l1.dtmf.energy) - sizeof(s->l1.dtmf.energy[0]));
+	}
+
+	memmove(s->l1.dtmf.energy+1, s->l1.dtmf.energy, sizeof(s->l1.dtmf.energy) - sizeof(s->l1.dtmf.energy[0]));
 	s->l1.dtmf.energy[0] = 0;
-	memmove(s->l1.dtmf.tenergy+1, s->l1.dtmf.tenergy, 
-		sizeof(s->l1.dtmf.tenergy) - sizeof(s->l1.dtmf.tenergy[0]));
+	memmove(s->l1.dtmf.tenergy+1, s->l1.dtmf.tenergy, sizeof(s->l1.dtmf.tenergy) - sizeof(s->l1.dtmf.tenergy[0]));
 	memset(s->l1.dtmf.tenergy, 0, sizeof(s->l1.dtmf.tenergy[0]));
 	tote *= (BLOCKNUM*BLOCKLEN*0.5);  /* adjust for block lengths */
-	verbprintf(10, "DTMF: Energies: %8.5f  %8.5f %8.5f %8.5f %8.5f  %8.5f %8.5f %8.5f %8.5f\n",
-		   tote, totte[0], totte[1], totte[2], totte[3], totte[4], totte[5], totte[6], totte[7]);
+	verbprintf(10, "DTMF: Energies: %8.5f  %8.5f %8.5f %8.5f %8.5f  %8.5f %8.5f %8.5f %8.5f\n", tote, totte[0], totte[1], totte[2], totte[3], totte[4], totte[5], totte[6], totte[7]);
+
 	if ((i = find_max_idx(totte)) < 0)
 		return -1;
 	if ((j = find_max_idx(totte+4)) < 0)
@@ -118,13 +133,13 @@ static inline int process_block(struct demod_state *s)
 		return -1;
 	if (totte[j+4]*3.0<totte[i])
 		return -1;
-	return (i & 3) | ((j << 2) & 0xc);
+
+	return (i & 3) | ((j << 2) & 0x0C);
 }
 
 /* ---------------------------------------------------------------------- */
 
-static void dtmf_demod(struct demod_state *s, buffer_t buffer, int length)
-{
+static void dtmf_demod(struct demod_state *s, buffer_t buffer, int length) {
 	float s_in;
 	int i;
 
@@ -145,11 +160,17 @@ static void dtmf_demod(struct demod_state *s, buffer_t buffer, int length)
 		}
 	}
 }
-				
+
 /* ---------------------------------------------------------------------- */
 
 const struct demod_param demod_dtmf = {
-    "DTMF", true, SAMPLE_RATE, 0, dtmf_init, dtmf_demod, NULL
+	"DTMF",
+	true,
+	SAMPLE_RATE,
+	0,
+	dtmf_init,
+	dtmf_demod,
+	NULL
 };
 
 /* ---------------------------------------------------------------------- */

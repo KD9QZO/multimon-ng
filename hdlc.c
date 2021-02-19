@@ -1,7 +1,7 @@
 /*
  *      hdlc.c -- hdlc decoder and AX.25 packet dump
  *
- *      Copyright (C) 1996  
+ *      Copyright (C) 1996
  *          Thomas Sailer (sailer@ife.ee.ethz.ch, hb9jnx@hb9w.che.eu)
  *
  *      This program is free software; you can redistribute it and/or modify
@@ -22,7 +22,9 @@
 /* ---------------------------------------------------------------------- */
 
 #include "multimon.h"
+
 #include <string.h>
+
 
 /* ---------------------------------------------------------------------- */
 
@@ -66,38 +68,47 @@ static const unsigned short crc_ccitt_table[] = {
         0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78
 };
 
+
 /* ---------------------------------------------------------------------- */
 
-static inline int check_crc_ccitt(const unsigned char *buf, int cnt)
-{
-        unsigned int crc = 0xffff;
+static inline int check_crc_ccitt(const unsigned char *buf, int cnt) {
+	unsigned int crc = 0xffff;
 
-        for (; cnt > 0; cnt--)
-                crc = (crc >> 8) ^ crc_ccitt_table[(crc ^ *buf++) & 0xff];
-        return (crc & 0xffff) == 0xf0b8;
+	for (; cnt > 0; cnt--) {
+		crc = (crc >> 8) ^ crc_ccitt_table[(crc ^ *buf++) & 0xff];
+	}
+
+	return (crc & 0xffff) == 0xf0b8;
 }
 
 /* ---------------------------------------------------------------------- */
 
 int aprs_mode = 0;
 
-static void aprs_print_ax25call(unsigned char *call, int is_repeater)
-{
+static void aprs_print_ax25call(unsigned char *call, int is_repeater) {
 	int i;
-	for (i = 0; i < 6; i++)
-		if ((call[i] &0xfe) != 0x40)
-			verbprintf(0, "%c",call[i] >> 1);
-	int ssid = (call[6] >> 1) & 0xf;
-	if (ssid)
-		verbprintf(0, "-%u",ssid);
-	// hack: only display "*" on the last repeater, as opposed to all that already repeated
-	if (is_repeater && (call[6] & 0x80))
-			verbprintf(0, "*");
+
+	for (i = 0; i < 6; i++) {
+		if ((call[i] &0xfe) != 0x40) {
+			verbprintf(0, "%c", call[i] >> 1);
+		}
+	}
+
+	int ssid = ((call[6] >> 1) & 0x0F);
+	if (ssid) {
+		verbprintf(0, "-%u", ssid);
+	}
+
+	/*! \todo HACK: only display "*" on the last repeater, as opposed to all that already repeated */
+	if (is_repeater && (call[6] & 0x80)) {
+		verbprintf(0, "*");
+	}
 }
-static void aprs_disp_packet(unsigned char *bp, unsigned int len)
-{
+
+static void aprs_disp_packet(unsigned char *bp, unsigned int len) {
 	unsigned char *hdr = bp + 14;
 	unsigned int hlen = len - 14;
+
 	// skip address fields
 	while ((!(hdr[-1] & 1)) && (hlen >= 7)) {
 		hdr += 7;
@@ -294,21 +305,20 @@ static void ax25_disp_packet(struct demod_state *s, unsigned char *bp, unsigned 
                         j = 1;
                 len--;
         }
-        if (j) 
-                verbprintf(0, "\n");
+        if (j) {
+        	verbprintf(0, "\n");
+        }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void hdlc_init(struct demod_state *s)
-{
+void hdlc_init(struct demod_state *s) {
 	memset(&s->l2.hdlc, 0, sizeof(s->l2.hdlc));
 }
 
 /* ---------------------------------------------------------------------- */
 
-void hdlc_rxbit(struct demod_state *s, int bit)
-{
+void hdlc_rxbit(struct demod_state *s, int bit) {
 	s->l2.hdlc.rxbitstream <<= 1;
 	s->l2.hdlc.rxbitstream |= !!bit;
 	if ((s->l2.hdlc.rxbitstream & 0xff) == 0x7e) {

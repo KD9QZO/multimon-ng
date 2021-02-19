@@ -601,25 +601,23 @@ static const char usage_str[] = "\n"
         "   samples at the demodulator's input sampling rate, which is\n"
         "   usually 22050 Hz. Raw input is assumed and required if piped input is used.\n";
 
-int main(int argc, char *argv[])
-{
-    int c;
-    int errflg = 0;
-    int quietflg = 0;
-    int i;
-    char **itype;
-    int mask_first = 1;
-    int sample_rate = -1;
-    unsigned int overlap = 0;
-    char *input_type = "hw";
+int main(int argc, char *argv[]) {
+	int c;
+	int errflg = 0;
+	int quietflg = 0;
+	int i;
+	char **itype;
+	int mask_first = 1;
+	int sample_rate = -1;
+	unsigned int overlap = 0;
+	char *input_type = "hw";
 
-    static struct option long_options[] =
-      {
-        {"timestamp", no_argument, &timestamp, 1},
-        {"label", required_argument, NULL, 'l'},
-        {"charset", required_argument, NULL, 'C'},
-        {0, 0, 0, 0}
-      };
+	static struct option long_options[] = {
+		{ "timestamp", no_argument, &timestamp, 1 },
+		{ "label", required_argument, NULL, 'l' },
+		{ "charset", required_argument, NULL, 'C' },
+		{ 0, 0, 0, 0 }
+	};
 
     while ((c = getopt_long(argc, argv, "t:a:s:v:f:b:C:o:d:g:cqhAmrnjeuipxy", long_options, NULL)) != EOF) {
         switch (c) {

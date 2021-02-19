@@ -21,23 +21,27 @@
 /* ---------------------------------------------------------------------- */
 
 #include "multimon.h"
+
 #include <string.h>
+
 
 /* ---------------------------------------------------------------------- */
 
-static void disp_packet(struct demod_state *s, unsigned char *bp, unsigned int len)
-{
-        unsigned char i,j;
-	(void) s;  // Suppress the warning.
+static void disp_packet(struct demod_state *s, unsigned char *bp, unsigned int len) {
+	unsigned char i,j;
+	(void)s;  // Suppress the warning.
 
-        if (!bp)
+	if (!bp)
 		return;
-        if (!len) {
-                verbprintf(0, "\n");
-                return;
-        }
-        j = 0;
-        while (len) {
+
+	if (!len) {
+		verbprintf(0, "\n");
+		return;
+	}
+
+	j = 0;
+
+	while (len) {
                 i = *bp++;
                 if ((i >= 32) && (i < 128))
                         verbprintf(0, "%c",i);
@@ -59,16 +63,14 @@ static void disp_packet(struct demod_state *s, unsigned char *bp, unsigned int l
 
 /* ---------------------------------------------------------------------- */
 
-void uart_init(struct demod_state *s)
-{
+void uart_init(struct demod_state *s) {
 	memset(&s->l2.uart, 0, sizeof(s->l2.uart));
 	s->l2.uart.rxptr = s->l2.uart.rxbuf;
 }
 
 /* ---------------------------------------------------------------------- */
 
-void uart_rxbit(struct demod_state *s, int bit)
-{
+void uart_rxbit(struct demod_state *s, int bit) {
 	s->l2.uart.rxbitstream <<= 1;
 	s->l2.uart.rxbitstream |= !!bit;
 	if (!s->l2.uart.rxstate) {
@@ -77,6 +79,7 @@ void uart_rxbit(struct demod_state *s, int bit)
 				s->l2.uart.rxstate = 1;
 				s->l2.uart.rxbitbuf = 0x100;
 				break;
+
 			case 0x00:	/* no start bit */
 			case 0x03:	/* consecutive stop bits*/
 				if ((s->l2.uart.rxptr - s->l2.uart.rxbuf) >= 1)
@@ -84,10 +87,14 @@ void uart_rxbit(struct demod_state *s, int bit)
 				s->l2.uart.rxptr = s->l2.uart.rxbuf;
 				break;
 		}
+
 		return;
 	}
-	if (s->l2.uart.rxbitstream & 1)
+
+	if (s->l2.uart.rxbitstream & 1) {
 		s->l2.uart.rxbitbuf |= 0x200;
+	}
+
 //	verbprintf(7, "b=%c", '0'+(s->l2.uart.rxbitstream & 1));
 	if (s->l2.uart.rxbitbuf & 1) {
 		if (s->l2.uart.rxptr >= s->l2.uart.rxbuf+sizeof(s->l2.uart.rxbuf)) {
@@ -108,7 +115,9 @@ void uart_rxbit(struct demod_state *s, int bit)
 		s->l2.uart.rxstate = 0;
 		return;
 	}
-      	s->l2.uart.rxbitbuf >>= 1;
+
+	s->l2.uart.rxbitbuf >>= 1;
 }
+
 
 /* ---------------------------------------------------------------------- */
